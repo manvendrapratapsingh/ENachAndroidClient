@@ -15,7 +15,16 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AuthInterceptor
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ResponseLoggingInterceptor
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -30,7 +39,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
-        return HttpLoggingInterceptor().apply {
+        return HttpLoggingInterceptor { message ->
+            // Enhanced logging with custom tag
+            android.util.Log.d("API_RAW_RESPONSE", message)
+        }.apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -41,6 +53,7 @@ object NetworkModule {
     
     @Provides
     @Singleton
+    @AuthInterceptor
     fun provideAuthInterceptor(tokenManager: AuthTokenManager): Interceptor {
         return Interceptor { chain ->
             val original = chain.request()
@@ -65,9 +78,50 @@ object NetworkModule {
     
     @Provides
     @Singleton
+    @ResponseLoggingInterceptor
+    fun provideResponseLoggingInterceptor(gson: Gson): Interceptor {
+        return Interceptor { chain ->
+            val response = chain.proceed(chain.request())
+            
+            // Log raw JSON response with pretty formatting
+            if (BuildConfig.DEBUG) {
+                val responseBody = response.body
+                val source = responseBody?.source()
+                source?.request(Long.MAX_VALUE) // Buffer the entire body
+                val buffer = source?.buffer
+                
+                val responseBodyString = buffer?.clone()?.readUtf8()
+                
+                android.util.Log.d("API_REQUEST", "URL: ${response.request.url}")
+                android.util.Log.d("API_REQUEST", "Method: ${response.request.method}")
+                android.util.Log.d("API_RESPONSE", "Status Code: ${response.code}")
+                android.util.Log.d("API_RESPONSE", "Headers: ${response.headers}")
+                
+                responseBodyString?.let { jsonString ->
+                    try {
+                        // Pretty print JSON
+                        val jsonElement = gson.fromJson(jsonString, com.google.gson.JsonElement::class.java)
+                        val prettyJson = gson.newBuilder().setPrettyPrinting().create().toJson(jsonElement)
+                        android.util.Log.d("API_RAW_JSON", "Raw Response JSON:\n$prettyJson")
+                        
+                        // Also log the plain JSON for copying
+                        android.util.Log.d("API_PLAIN_JSON", jsonString)
+                    } catch (e: Exception) {
+                        android.util.Log.d("API_RAW_JSON", "Raw Response: $jsonString")
+                    }
+                }
+            }
+            
+            response
+        }
+    }
+    
+    @Provides
+    @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
-        authInterceptor: Interceptor
+        @AuthInterceptor authInterceptor: Interceptor,
+        @ResponseLoggingInterceptor responseLoggingInterceptor: Interceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(0, TimeUnit.MILLISECONDS)
@@ -75,6 +129,7 @@ object NetworkModule {
             .writeTimeout(0, TimeUnit.MILLISECONDS)
             .callTimeout(0, TimeUnit.MILLISECONDS)
             .addInterceptor(authInterceptor)
+            .addInterceptor(responseLoggingInterceptor)
             .addInterceptor(loggingInterceptor)
             .build()
     }
