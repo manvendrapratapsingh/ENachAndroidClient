@@ -107,7 +107,7 @@ data class ChequeData(
     val chequeNumber: String?,
     @SerializedName("cheque_date")
     val chequeDate: String?,
-    val amount: Double?,
+    val amount: String?,
     @SerializedName("confidence_scores")
     val confidenceScores: Map<String, Double>
 )
@@ -128,7 +128,7 @@ data class ENachFormData(
     @SerializedName("micr_code")
     val micrCode: String?,
     @SerializedName("mandate_amount")
-    val mandateAmount: Int?,
+    val mandateAmount: String?,
     @SerializedName("mandate_frequency")
     val mandateFrequency: String?,
     @SerializedName("mandate_start_date")

@@ -30,7 +30,7 @@ interface ENachApiService {
     suspend fun createJob(
         @Header("Authorization") token: String,
         @Part chequeImage: MultipartBody.Part,
-        @Part enachForm: MultipartBody.Part,
+        @Part enachForm: MultipartBody.Part?,
         @Part("customer_identifier") customerIdentifier: RequestBody?,
         @Part("customer_name") customerName: RequestBody?,
         @Part("customer_email") customerEmail: RequestBody?,

@@ -66,7 +66,7 @@ class ENachRepository @Inject constructor(
     // Job Creation
     suspend fun createJob(
         chequeImageFile: File,
-        enachFormFile: File,
+        enachFormFile: File? = null,
         customerIdentifier: String? = null,
         customerName: String? = null,
         customerEmail: String? = null,
@@ -84,11 +84,13 @@ class ENachRepository @Inject constructor(
                 chequeImageFile.asRequestBody("image/*".toMediaType())
             )
             
-            val enachFormPart = MultipartBody.Part.createFormData(
-                "enach_form",
-                enachFormFile.name,
-                enachFormFile.asRequestBody("application/pdf".toMediaType())
-            )
+            val enachFormPart = enachFormFile?.let {
+                MultipartBody.Part.createFormData(
+                    "enach_form",
+                    it.name,
+                    it.asRequestBody("application/pdf".toMediaType())
+                )
+            }
             
             val response = apiService.createJob(
                 token = token,

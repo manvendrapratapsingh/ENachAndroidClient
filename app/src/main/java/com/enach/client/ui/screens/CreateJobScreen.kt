@@ -1,8 +1,6 @@
 package com.enach.client.ui.screens
 
 import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -56,7 +53,6 @@ fun CreateJobScreen(
     val scrollState = rememberScrollState()
     
     var chequeImageUri by remember { mutableStateOf<Uri?>(null) }
-    var enachFormUri by remember { mutableStateOf<Uri?>(null) }
     var customerIdentifier by remember { mutableStateOf("") }
     var customerName by remember { mutableStateOf("") }
     var customerEmail by remember { mutableStateOf("") }
@@ -94,30 +90,7 @@ fun CreateJobScreen(
         }
     }
     
-    // Multiple image picker launcher (for devices that support it)
-    val multipleImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let {
-            // Take persistable permission for the URI
-            context.contentResolver.takePersistableUriPermission(
-                it,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            chequeImageUri = it
-            errorMessage = null
-        }
-    }
     
-    // Document picker launcher for e-NACH form
-    val enachFormLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { 
-            enachFormUri = it
-            errorMessage = null
-        }
-    }
     
     // Camera launcher for cheque
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -221,7 +194,7 @@ fun CreateJobScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "• Cheque image: Clear photo or scan\n• e-NACH form: PDF document only\n• Maximum file size: 10MB each",
+                                text = "• Cheque image: Clear photo or scan\n• Maximum file size: 10MB",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -360,85 +333,6 @@ fun CreateJobScreen(
                             Icon(Icons.Default.CameraAlt, contentDescription = "Camera")
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Camera")
-                        }
-                    }
-                }
-            }
-            
-            // e-NACH Form Upload
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "e-NACH Form (PDF) *",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (enachFormUri != null) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "Uploaded",
-                                tint = Color.Green
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    if (enachFormUri != null) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.PictureAsPdf,
-                                        contentDescription = "PDF",
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                    Text(
-                                        text = "e-NACH Form.pdf",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = { enachFormUri = null }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Remove",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { enachFormLauncher.launch("application/pdf") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.Upload, contentDescription = "Upload")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Select PDF Document")
                         }
                     }
                 }
@@ -626,7 +520,6 @@ fun CreateJobScreen(
                                     jobResponse = null
                                     viewModel.clearCreateJobState()
                                     chequeImageUri = null
-                                    enachFormUri = null
                                     customerIdentifier = ""
                                     customerName = ""
                                     customerEmail = ""
@@ -682,31 +575,30 @@ fun CreateJobScreen(
                 Button(
                     onClick = {
                         scope.launch {
-                            if (chequeImageUri != null && enachFormUri != null) {
+                            if (chequeImageUri != null) {
                                 val chequeFile = FileUtils.getFileFromUri(context, chequeImageUri!!)
-                                val enachFile = FileUtils.getFileFromUri(context, enachFormUri!!)
                                 
-                                if (chequeFile != null && enachFile != null) {
+                                if (chequeFile != null) {
                                     viewModel.createJob(
                                         chequeImageFile = chequeFile,
-                                        enachFormFile = enachFile,
+                                        enachFormFile = null,
                                         customerIdentifier = customerIdentifier.ifEmpty { null },
                                         customerName = customerName.ifEmpty { null },
                                         customerEmail = customerEmail.ifEmpty { null },
                                         customerMobile = customerMobile.ifEmpty { null }
                                     )
                                 } else {
-                                    errorMessage = "Failed to process files. Please try again."
+                                    errorMessage = "Failed to process cheque image. Please try again."
                                 }
                             } else {
-                                errorMessage = "Please select both cheque image and e-NACH form"
+                                errorMessage = "Please select a cheque image"
                             }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = !isLoading && chequeImageUri != null && enachFormUri != null
+                    enabled = !isLoading && chequeImageUri != null
                 ) {
                     if (isLoading) {
                         Row(

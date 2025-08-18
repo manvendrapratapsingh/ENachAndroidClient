@@ -43,8 +43,6 @@ class JobViewModel @Inject constructor(
     private val _chequeImageUri = MutableStateFlow<Uri?>(null)
     val chequeImageUri: StateFlow<Uri?> = _chequeImageUri.asStateFlow()
     
-    private val _enachFormUri = MutableStateFlow<Uri?>(null)
-    val enachFormUri: StateFlow<Uri?> = _enachFormUri.asStateFlow()
     
     private val _customerIdentifier = MutableStateFlow("")
     val customerIdentifier: StateFlow<String> = _customerIdentifier.asStateFlow()
@@ -62,9 +60,6 @@ class JobViewModel @Inject constructor(
         _chequeImageUri.value = uri
     }
     
-    fun setEnachForm(uri: Uri) {
-        _enachFormUri.value = uri
-    }
     
     fun updateCustomerIdentifier(value: String) {
         _customerIdentifier.value = value
@@ -83,13 +78,13 @@ class JobViewModel @Inject constructor(
     }
     
     fun canSubmit(): Boolean {
-        return _chequeImageUri.value != null && _enachFormUri.value != null
+        return _chequeImageUri.value != null
     }
     
     // Overloaded createJob method for CreateJobScreen
     fun createJob(
         chequeImageFile: File,
-        enachFormFile: File,
+        enachFormFile: File? = null,
         customerIdentifier: String? = null,
         customerName: String? = null,
         customerEmail: String? = null,
@@ -118,25 +113,23 @@ class JobViewModel @Inject constructor(
     
     fun createJob() {
         val chequeUri = _chequeImageUri.value ?: return
-        val enachUri = _enachFormUri.value ?: return
         
         viewModelScope.launch {
             try {
-                // Convert URIs to Files
+                // Convert URI to File
                 val chequeFile = FileUtils.getFileFromUri(context, chequeUri)
-                val enachFile = FileUtils.getFileFromUri(context, enachUri)
                 
-                if (chequeFile != null && enachFile != null) {
+                if (chequeFile != null) {
                     createJob(
                         chequeImageFile = chequeFile,
-                        enachFormFile = enachFile,
+                        enachFormFile = null,
                         customerIdentifier = _customerIdentifier.value.ifEmpty { null },
                         customerName = _customerName.value.ifEmpty { null },
                         customerEmail = _customerEmail.value.ifEmpty { null },
                         customerMobile = _customerMobile.value.ifEmpty { null }
                     )
                 } else {
-                    _jobCreationState.value = Resource.Error("Failed to process selected files")
+                    _jobCreationState.value = Resource.Error("Failed to process cheque image")
                 }
             } catch (e: Exception) {
                 _jobCreationState.value = Resource.Error(e.message ?: "An error occurred")
@@ -204,7 +197,6 @@ class JobViewModel @Inject constructor(
     fun clearCreateJobState() {
         _jobCreationState.value = null
         _chequeImageUri.value = null
-        _enachFormUri.value = null
         _customerIdentifier.value = ""
         _customerName.value = ""
         _customerEmail.value = ""
