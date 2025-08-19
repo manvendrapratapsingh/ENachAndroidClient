@@ -53,6 +53,7 @@ fun CreateJobScreen(
     val scrollState = rememberScrollState()
     
     var chequeImageUri by remember { mutableStateOf<Uri?>(null) }
+    var enachFormImageUri by remember { mutableStateOf<Uri?>(null) }
     var customerIdentifier by remember { mutableStateOf("") }
     var customerName by remember { mutableStateOf("") }
     var customerEmail by remember { mutableStateOf("") }
@@ -60,6 +61,7 @@ fun CreateJobScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var tempNachCameraUri by remember { mutableStateOf<Uri?>(null) }
     var showCameraPermissionDialog by remember { mutableStateOf(false) }
     
     val jobCreationState by viewModel.jobCreationState.collectAsState()
@@ -70,11 +72,11 @@ fun CreateJobScreen(
     )
     
     // Create temporary file for camera capture
-    fun createImageFile(): File {
+    fun createImageFile(prefix: String = "CHEQUE"): File {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = context.cacheDir
         return File.createTempFile(
-            "CHEQUE_${timeStamp}_",
+            "${prefix}_${timeStamp}_",
             ".jpg",
             storageDir
         )
@@ -85,13 +87,29 @@ fun CreateJobScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { 
-            chequeImageUri = it
-            errorMessage = null
+            if (FileUtils.isFileSizeValid(context, it)) {
+                chequeImageUri = it
+                errorMessage = null
+            } else {
+                errorMessage = "Cheque image exceeds 10MB size limit"
+            }
         }
     }
-    
-    
-    
+
+    // Image picker launcher for NACH form from gallery
+    val nachImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            if (FileUtils.isFileSizeValid(context, it)) {
+                enachFormImageUri = it
+                errorMessage = null
+            } else {
+                errorMessage = "NACH form image exceeds 10MB size limit"
+            }
+        }
+    }
+
     // Camera launcher for cheque
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -105,6 +123,20 @@ fun CreateJobScreen(
             Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
         }
     }
+
+    // Camera launcher for NACH form
+    val nachCameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempNachCameraUri?.let {
+                enachFormImageUri = it
+                errorMessage = null
+            }
+        } else {
+            Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
+        }
+    }
     
     // Request camera permission launcher
     val requestPermissionLauncher = rememberLauncherForActivityResult(
@@ -112,7 +144,7 @@ fun CreateJobScreen(
     ) { isGranted ->
         if (isGranted) {
             // Permission granted, launch camera
-            val photoFile = createImageFile()
+            val photoFile = createImageFile("CHEQUE")
             tempCameraUri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -194,7 +226,7 @@ fun CreateJobScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "• Cheque image: Clear photo or scan\n• Maximum file size: 10MB",
+                                text = "• Cheque image: Clear photo or scan\n• NACH form image: Photo or scan (optional)\n• Maximum file size per file: 10MB",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -310,13 +342,13 @@ fun CreateJobScreen(
                                 when {
                                     cameraPermissionState.status.isGranted -> {
                                         // Permission already granted, launch camera
-                                        val photoFile = createImageFile()
-                                        tempCameraUri = FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.fileprovider",
-                                            photoFile
-                                        )
-                                        tempCameraUri?.let { cameraLauncher.launch(it) }
+                                    val photoFile = createImageFile("CHEQUE")
+                                    tempCameraUri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        photoFile
+                                    )
+                                    tempCameraUri?.let { cameraLauncher.launch(it) }
                                     }
                                     cameraPermissionState.status.shouldShowRationale -> {
                                         // Show rationale dialog
@@ -324,6 +356,139 @@ fun CreateJobScreen(
                                     }
                                     else -> {
                                         // Request permission
+                                        requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = "Camera")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Camera")
+                        }
+                    }
+                }
+            }
+
+            // NACH Form Image Upload (Optional)
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "NACH Form Image (Optional)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (enachFormImageUri != null) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Uploaded",
+                                tint = Color.Green
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (enachFormImageUri != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(enachFormImageUri),
+                                contentDescription = "NACH Form Image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = { enachFormImageUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp)
+                                .border(
+                                    2.dp,
+                                    MaterialTheme.colorScheme.outline,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { nachImageLauncher.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription = "Upload",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Tap to select NACH form image",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { nachImageLauncher.launch("image/*") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Upload, contentDescription = "Gallery")
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Gallery")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                when {
+                                    cameraPermissionState.status.isGranted -> {
+                                        val photoFile = createImageFile("NACH")
+                                        tempNachCameraUri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            photoFile
+                                        )
+                                        tempNachCameraUri?.let { nachCameraLauncher.launch(it) }
+                                    }
+                                    cameraPermissionState.status.shouldShowRationale -> {
+                                        showCameraPermissionDialog = true
+                                    }
+                                    else -> {
                                         requestPermissionLauncher.launch(Manifest.permission.CAMERA)
                                     }
                                 }
@@ -423,6 +588,70 @@ fun CreateJobScreen(
                         }
                         
                         Spacer(modifier = Modifier.height(12.dp))
+
+                        // Validation summary if available
+                        response.validationReport?.let { vr ->
+                            val shouldBlock = (!vr.isValid) || vr.requiresManualReview
+                            val container = if (shouldBlock) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
+                            val onContainer = if (shouldBlock) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = container)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = if (shouldBlock) "Validation Issues Detected" else "Validation Passed",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = onContainer
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    if (shouldBlock && vr.errors.isNotEmpty()) {
+                                        Text(
+                                            text = "Errors:",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = onContainer
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        vr.errors.forEach { e ->
+                                            Text(
+                                                text = "• ${e.field}: ${e.error}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = onContainer
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Please re-upload the problematic document(s). For cancelled or handwritten/non-CTS cheques, upload a valid cheque.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = onContainer
+                                        )
+                                    }
+
+                                    if (vr.warnings.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Warnings (tips):",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = onContainer
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        vr.warnings.forEach { w ->
+                                            Text(
+                                                text = "• ${w.field}: ${w.error}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = onContainer
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                         
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -520,6 +749,7 @@ fun CreateJobScreen(
                                     jobResponse = null
                                     viewModel.clearCreateJobState()
                                     chequeImageUri = null
+                                    enachFormImageUri = null
                                     customerIdentifier = ""
                                     customerName = ""
                                     customerEmail = ""
@@ -532,13 +762,15 @@ fun CreateJobScreen(
                                 Text("Create New Job")
                             }
                             
+                            val blockNext = response.validationReport?.let { (!it.isValid) || it.requiresManualReview } ?: false
                             Button(
                                 onClick = { navController.navigate("job_details/${response.jobId}") },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                enabled = !blockNext
                             ) {
                                 Icon(Icons.Default.Visibility, contentDescription = "View Details")
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("View Details")
+                                Text(if (blockNext) "Fix Issues to Proceed" else "View Details")
                             }
                         }
                     }
@@ -577,11 +809,12 @@ fun CreateJobScreen(
                         scope.launch {
                             if (chequeImageUri != null) {
                                 val chequeFile = FileUtils.getFileFromUri(context, chequeImageUri!!)
+                                val nachFile = enachFormImageUri?.let { FileUtils.getFileFromUri(context, it) }
                                 
                                 if (chequeFile != null) {
                                     viewModel.createJob(
                                         chequeImageFile = chequeFile,
-                                        enachFormFile = null,
+                                        enachFormFile = nachFile,
                                         customerIdentifier = customerIdentifier.ifEmpty { null },
                                         customerName = customerName.ifEmpty { null },
                                         customerEmail = customerEmail.ifEmpty { null },

@@ -3,6 +3,7 @@ package com.enach.client.data.repository
 import com.enach.client.data.api.ENachApiService
 import com.enach.client.data.models.*
 import com.enach.client.utils.Resource
+import com.enach.client.utils.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -85,10 +86,16 @@ class ENachRepository @Inject constructor(
             )
             
             val enachFormPart = enachFormFile?.let {
+                val fileName = it.name
+                val mediaType = when {
+                    FileUtils.isImageFile(fileName) -> "image/*".toMediaType()
+                    FileUtils.isPdfFile(fileName) -> "application/pdf".toMediaType()
+                    else -> "application/octet-stream".toMediaType()
+                }
                 MultipartBody.Part.createFormData(
                     "enach_form",
-                    it.name,
-                    it.asRequestBody("application/pdf".toMediaType())
+                    fileName,
+                    it.asRequestBody(mediaType)
                 )
             }
             
