@@ -109,7 +109,14 @@ data class ChequeData(
     val chequeDate: String?,
     val amount: String?,
     @SerializedName("confidence_scores")
-    val confidenceScores: Map<String, Double>
+    val confidenceScores: Map<String, Double>,
+    // New fields for quality and signature validation
+    @SerializedName("signature_present")
+    val signaturePresent: Boolean? = null,
+    @SerializedName("document_quality")
+    val documentQuality: String? = null,
+    @SerializedName("document_type")
+    val documentType: String? = null
 )
 
 data class ENachFormData(
@@ -147,7 +154,14 @@ data class ENachFormData(
     @SerializedName("sponsor_bank")
     val sponsorBank: String?,
     @SerializedName("utility_code")
-    val utilityCode: String?
+    val utilityCode: String?,
+    // New fields for quality and signature validation
+    @SerializedName("signature_present")
+    val signaturePresent: Boolean? = null,
+    @SerializedName("document_quality")
+    val documentQuality: String? = null,
+    @SerializedName("document_type")
+    val documentType: String? = null
 )
 
 data class ValidationReport(
