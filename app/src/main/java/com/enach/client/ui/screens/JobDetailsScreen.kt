@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.enach.client.ui.viewmodels.JobViewModel
+import com.enach.client.ui.components.ChequeDataView
+import com.enach.client.ui.components.ENachFormView
+import com.enach.client.ui.components.ValidationReportView
 import com.enach.client.utils.Resource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,22 +74,23 @@ fun JobDetailsScreen(
                         // Job Info Header
                         JobInfoCard(jobData = jobData)
                         
-                        // Cheque OCR Results
-                        ChequeDataCard(chequeData = jobData.chequeData)
+                        // NEW SEPARATED COMPONENTS
+                        // Cheque OCR Results - Blue themed
+                        ChequeDataView(chequeData = jobData.chequeData)
                         
-                        // eNACH Form Results  
-                        EnachFormDataCard(enachFormData = jobData.enachFormData)
+                        // eNACH Form Results - Green themed
+                        ENachFormView(enachFormData = jobData.enachFormData)
                         
-                        // Raw OCR Text Card
+                        // Validation Results - Color coded
+                        ValidationReportView(validationReport = jobData.validationReport)
+                        
+                        // Raw OCR Text Card (keeping for debugging)
                         RawOCRTextCard(enachFormData = jobData.enachFormData)
                         
                         // Processing Summary (if available)
                         if (jobData.errorMessage != null) {
                             RawResultsCard(message = jobData.errorMessage)
                         }
-                        
-                        // Validation Info
-                        ValidationCard(validationReport = jobData.validationReport)
                     }
                 }
                 

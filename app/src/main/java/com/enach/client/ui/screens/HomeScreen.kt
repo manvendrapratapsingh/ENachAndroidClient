@@ -170,6 +170,27 @@ fun HomeScreen(
                             }
                         )
                     }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Demo button
+                    OutlinedButton(
+                        onClick = { navController.navigate("demo_data_separation") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = "Demo",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("View Data Separation Demo")
+                        }
+                    }
                 }
             }
 

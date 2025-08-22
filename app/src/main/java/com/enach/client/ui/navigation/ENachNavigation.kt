@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.enach.client.ui.screens.*
+import com.enach.client.ui.screens.DemoDataSeparationScreen
 
 @Composable
 fun ENachNavHost(
@@ -93,6 +94,13 @@ fun ENachNavHost(
         
         composable("settings") {
             PlaceholderScreen(title = "Settings")
+        }
+        
+        // Demo Data Separation Screen
+        composable("demo_data_separation") {
+            DemoDataSeparationScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

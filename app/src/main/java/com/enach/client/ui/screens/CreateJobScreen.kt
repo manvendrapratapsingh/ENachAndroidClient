@@ -30,6 +30,9 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.enach.client.ui.components.ChequeDataView
+import com.enach.client.ui.components.ENachFormView
+import com.enach.client.ui.components.ValidationReportView
 import com.enach.client.ui.viewmodels.JobViewModel
 import com.enach.client.utils.FileUtils
 import com.enach.client.utils.Resource
@@ -587,158 +590,42 @@ fun CreateJobScreen(
                             )
                         }
                         
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Validation summary if available
-                        response.validationReport?.let { vr ->
-                            val shouldBlock = (!vr.isValid) || vr.requiresManualReview
-                            val container = if (shouldBlock) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
-                            val onContainer = if (shouldBlock) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
-
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = container)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        text = if (shouldBlock) "Validation Issues Detected" else "Validation Passed",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = onContainer
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    if (shouldBlock && vr.errors.isNotEmpty()) {
-                                        Text(
-                                            text = "Errors:",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = onContainer
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        vr.errors.forEach { e ->
-                                            Text(
-                                                text = "• ${e.field}: ${e.error}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = onContainer
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "Please re-upload the problematic document(s). For cancelled or handwritten/non-CTS cheques, upload a valid cheque.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = onContainer
-                                        )
-                                    }
-
-                                    if (vr.warnings.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "Warnings (tips):",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = onContainer
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        vr.warnings.forEach { w ->
-                                            Text(
-                                                text = "• ${w.field}: ${w.error}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = onContainer
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                        
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Job ID:",
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = response.jobId,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Status:",
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = response.status.uppercase(),
-                                        fontWeight = FontWeight.Bold,
-                                        color = when (response.status.lowercase()) {
-                                            "pending" -> MaterialTheme.colorScheme.tertiary
-                                            "processing" -> MaterialTheme.colorScheme.primary
-                                            "completed" -> Color.Green
-                                            "failed" -> MaterialTheme.colorScheme.error
-                                            else -> MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                }
-                                
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Created:",
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = response.createdAt,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "Progress:",
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "${response.progressPercentage}%",
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                
-                                if (!response.errorMessage.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = response.errorMessage,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
                         
                         Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Text(
+                            text = "Job ID: ${response.jobId} • Status: ${response.status.uppercase()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // NEW SEPARATED DATA COMPONENTS
+                ChequeDataView(chequeData = response.chequeData)
+                
+                ENachFormView(enachFormData = response.enachFormData)
+                
+                ValidationReportView(validationReport = response.validationReport)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Action Buttons Card
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Next Steps",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
                         
                         Row(
                             modifier = Modifier.fillMaxWidth(),
