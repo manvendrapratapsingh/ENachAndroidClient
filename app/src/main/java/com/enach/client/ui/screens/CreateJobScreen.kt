@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -763,33 +766,39 @@ fun CreateJobScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
+                    .background(Color.Black.copy(alpha = 0.7f))
                     .clickable(enabled = false) { /* Block all clicks */ },
                 contentAlignment = Alignment.Center
             ) {
                 Card(
-                    modifier = Modifier.wrapContentSize(),
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .padding(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 4.dp
-                        )
+                        // Animated loading indicator
+                        LoadingAnimation()
+                        
                         Text(
-                            text = "Processing your request...",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
+                            text = "Processing your documents...",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.primary
                         )
+                        
+                        // Progress steps
+                        ProcessingSteps()
+                        
                         Text(
                             text = "This may take a few moments",
                             style = MaterialTheme.typography.bodyMedium,
@@ -801,5 +810,127 @@ fun CreateJobScreen(
             }
         }
     }
+    }
+}
+
+@Composable
+fun LoadingAnimation() {
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+    
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    
+    Box(
+        modifier = Modifier.size(80.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Outer rotating circle
+        CircularProgressIndicator(
+            modifier = Modifier
+                .size(70.dp)
+                .graphicsLayer(rotationZ = rotation),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            strokeWidth = 6.dp
+        )
+        
+        // Inner pulsing circle
+        CircularProgressIndicator(
+            modifier = Modifier
+                .size(50.dp)
+                .graphicsLayer(scaleX = scale, scaleY = scale),
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 6.dp,
+            strokeCap = StrokeCap.Round
+        )
+        
+        // Central icon
+        Icon(
+            imageVector = Icons.Default.Description,
+            contentDescription = "Processing",
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+fun ProcessingSteps() {
+    val steps = listOf(
+        "Uploading documents" to true,
+        "Analyzing cheque" to true,
+        "Extracting eNACH data" to false,
+        "Validating information" to false
+    )
+    
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        steps.forEachIndexed { index, (step, completed) ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Step indicator
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .background(
+                            if (completed) MaterialTheme.colorScheme.primary else Color.Gray,
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (completed) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Completed",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.White
+                        )
+                    } else {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Step text
+                Text(
+                    text = step,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            // Progress line (except for last item)
+            if (index < steps.size - 1) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 12.dp, top = 4.dp, bottom = 4.dp)
+                        .height(24.dp)
+                        .width(2.dp)
+                        .background(Color.Gray.copy(alpha = 0.3f))
+                )
+            }
+        }
     }
 }

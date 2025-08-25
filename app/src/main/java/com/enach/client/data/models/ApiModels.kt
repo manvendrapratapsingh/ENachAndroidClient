@@ -116,7 +116,9 @@ data class ChequeData(
     @SerializedName("document_quality")
     val documentQuality: String? = null,
     @SerializedName("document_type")
-    val documentType: String? = null
+    val documentType: String? = null,
+    @SerializedName("issues")
+    val issues: List<String>? = null
 )
 
 data class ENachFormData(
@@ -161,7 +163,9 @@ data class ENachFormData(
     @SerializedName("document_quality")
     val documentQuality: String? = null,
     @SerializedName("document_type")
-    val documentType: String? = null
+    val documentType: String? = null,
+    @SerializedName("issues")
+    val issues: List<String>? = null
 )
 
 data class ValidationReport(
