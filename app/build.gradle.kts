@@ -32,7 +32,7 @@ android {
             isMinifyEnabled = false
             // Use localhost:8000 for physical device on same network
             // Use 10.0.2.2:8000 for Android emulator
-            buildConfigField("String", "BASE_URL", "\"https://e9f25b56fa7a.ngrok-free.app/\"") // For emulator
+            buildConfigField("String", "BASE_URL", "\"http://192.168.29.215:8000\"") // For emulator
         }
         release {
             isMinifyEnabled = true

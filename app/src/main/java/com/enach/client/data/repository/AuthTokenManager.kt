@@ -26,13 +26,38 @@ class AuthTokenManager @Inject constructor(
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
     
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        "secure_auth_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val encryptedPrefs = createEncryptedPreferences()
+    
+    private fun createEncryptedPreferences(): android.content.SharedPreferences {
+        return try {
+            EncryptedSharedPreferences.create(
+                context,
+                "secure_auth_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            clearCorruptedData()
+            EncryptedSharedPreferences.create(
+                context,
+                "secure_auth_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
+    }
+    
+    private fun clearCorruptedData() {
+        try {
+            context.deleteSharedPreferences("secure_auth_prefs")
+        } catch (e: Exception) {
+            // Fallback: manually clear the preferences file
+            val prefsFile = context.getSharedPreferences("secure_auth_prefs", Context.MODE_PRIVATE)
+            prefsFile.edit().clear().apply()
+        }
+    }
     
     companion object {
         private const val TOKEN_KEY = "auth_token"
